@@ -13,3 +13,5 @@ To utilize the JSON db file, `jq` can be used.
 ```
 jq '."datadog/datadog-agent" | to_entries[] | select(.value.milestone_title == "7.46.0") | "https://github.com/DataDog/datadog-agent/pull/\(.key) Run-ID: \(.value.regression_run_id)"' regression_comments_by_pr.json
 ```
+
+Alternatively, use the project found in `go-parser` to parse the actual content of the regression table comment
