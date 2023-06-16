@@ -1,28 +1,10 @@
-SMP's regression detector bot leaves comments on the agent PRs that have the run-id and a summary table of analysis.
+Parses through raw github regression detector tables and prints summary line for
+each PR
 
-This tool will look through all PRs in a given repo and find the ones left by this bot name and capture them into a json db file.
 
-```
-# Make sure GH_TOKEN env var is set
-# To fetch 50 PRs that contain a regression detector comment
-python3 main.py datadog datadog-agent 50
-```
-
-## Viewing the regression data
-`jq` can do some basic filtering and reformatting, however there is a go parser
-in `./go-parser` that is much faster and parses the actual HTML as well for even
-simpler formatting
-
-#### `jq` example
-To utilize the JSON db file, `jq` can be used.
+Looks for `../regression_comments_by_pr.json` as the input file by default
 
 ```
-jq '."datadog/datadog-agent" | to_entries[] | select(.value.milestone_title == "7.46.0") | "https://github.com/DataDog/datadog-agent/pull/\(.key) Run-ID: \(.value.regression_run_id)"' regression_comments_by_pr.json
-```
-
-#### `go-parser`
-```
-$ cd go-parser
 $ go run main.go | awk ' {print $3, $6, $7, $8, $9, $10}' | sort -n
 <snip>
 https://github.com/datadog/datadog-agent/pull/17447 throughput -0.37 [-1.42, +0.67] 35.44%]
@@ -37,3 +19,4 @@ https://github.com/datadog/datadog-agent/pull/17588 throughput +1.85 [+0.80, +2.
 https://github.com/datadog/datadog-agent/pull/17593 throughput +0.87 [-0.17, +1.91] 71.57%]
 https://github.com/datadog/datadog-agent/pull/17692 throughput +0.44 [-0.58, +1.46] 41.59%]
 ```
+

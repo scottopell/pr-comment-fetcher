@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 
 	"golang.org/x/net/html"
@@ -24,6 +25,7 @@ type RegressionComment struct {
 
 func main() {
 	filePath := "../regression_comments_by_pr.json"
+	log.SetOutput(os.Stdout)
 
 	data, err := readJSONFile(filePath)
 	if err != nil {
