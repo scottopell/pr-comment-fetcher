@@ -54,21 +54,18 @@ func extractFields(data RepositoryData) {
 	for repo, prDataMap := range data {
 		for prNumber, prData := range prDataMap {
 			htmlContent := prData.RegressionComment.Body
-			milestoneTitle := prData.MilestoneTitle
 
-			if milestoneTitle == "7.46.0" {
-				htmlReader := strings.NewReader(htmlContent)
+			htmlReader := strings.NewReader(htmlContent)
 
-				doc, err := html.Parse(htmlReader)
-				if err != nil {
-					log.Fatalf("Failed to parse HTML: %v", err)
-				}
+			doc, err := html.Parse(htmlReader)
+			if err != nil {
+				log.Fatalf("Failed to parse HTML: %v", err)
+			}
 
-				rows := extractTableRows(doc)
-				for _, row := range rows {
-					if len(row) >= 2 && row[0] == "uds_dogstatsd_to_api" {
-						log.Printf("https://github.com/%s/pull/%s\t %v\n", repo, prNumber, row)
-					}
+			rows := extractTableRows(doc)
+			for _, row := range rows {
+				if len(row) >= 2 && row[0] == "uds_dogstatsd_to_api" {
+					log.Printf("https://github.com/%s/pull/%s\t %v\n", repo, prNumber, row)
 				}
 			}
 		}
