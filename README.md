@@ -20,7 +20,37 @@ To utilize the JSON db file, `jq` can be used.
 jq '."datadog/datadog-agent" | to_entries[] | select(.value.milestone_title == "7.46.0") | "https://github.com/DataDog/datadog-agent/pull/\(.key) Run-ID: \(.value.regression_run_id)"' regression_comments_by_pr.json
 ```
 
+#### `rust-parser`
+This one looks at the 'merged' status and counts the number of emojis in the
+regression detector comment to determine "improvements" and "regressions".
+
+There are small issues around "erratic" experiments, but they result in a
+false-positive, not a false-negative. So it just means a few of the results can be
+ignored.
+
+```
+$ cd rust-parser
+$ cargo run -- --path ../regression_comments_by_pr.json -m 7.53.0 -r datadog/datadog-agent
+Merged PRs with either a Regression or an Improvement:
+=====================
+Improvements: 0, Regressions: 4 https://github.com/DataDog/datadog-agent/pull/24088#issuecomment-2020396814
+Improvements: 0, Regressions: 2 https://github.com/DataDog/datadog-agent/pull/23565#issuecomment-1985535497
+Improvements: 2, Regressions: 0 https://github.com/DataDog/datadog-agent/pull/23752#issuecomment-1996871783
+Improvements: 2, Regressions: 0 https://github.com/DataDog/datadog-agent/pull/23750#issuecomment-1996183494
+Improvements: 2, Regressions: 0 https://github.com/DataDog/datadog-agent/pull/23671#issuecomment-1991787956
+Improvements: 10, Regressions: 2 https://github.com/DataDog/datadog-agent/pull/23954#issuecomment-2011946883
+Improvements: 0, Regressions: 2 https://github.com/DataDog/datadog-agent/pull/23764#issuecomment-1997963768
+=====================
+Total PRs: 306
+Merged: 293
+Not Merged: 13
+Merged with regression: 4
+```
+
 #### `go-parser`
+This one tries to parse out the HTML table to get at the results, which is
+brittle and seems a bit broken currently.
+
 ```
 $ cd go-parser
 $ go run main.go | awk ' {print $3, $6, $7, $8, $9, $10}' | sort -n
