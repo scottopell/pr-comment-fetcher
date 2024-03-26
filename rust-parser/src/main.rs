@@ -100,8 +100,25 @@ fn filter_and_summarize(prs: &HashMap<String, PR>, milestone_filter: Option<&str
     println!("=====================");
     for pr in merged {
         if let Some(comment) = &pr.regression_comment {
-            let improvements = comment.body.match_indices('✅').count() - 1; // there is a legend in each comment, which is why we subtract 1
-            let regressions = comment.body.match_indices('❌').count() - 1;
+            if comment
+                .body
+                .contains("No significant changes in experiment optimization goals")
+            {
+                continue;
+            }
+            let (_, details) = match comment
+                .body
+                .split_once("Significant changes in experiment optimization goals")
+            {
+                Some((_, details)) => ("", details),
+                None => panic!("Unknown regression detector comment: {:#?}", comment.body),
+            };
+            let (details, _) = match details.split_once("Experiments ignored for regressions") {
+                Some((details, _)) => (details, ""),
+                None => panic!("Unknown regression detector comment: {:#?}", comment.body),
+            };
+            let improvements = details.match_indices('✅').count();
+            let regressions = details.match_indices('❌').count();
             if regressions > 0 {
                 merged_with_regression += 1;
             }
