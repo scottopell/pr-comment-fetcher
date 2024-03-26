@@ -69,6 +69,7 @@ def get_comments_from_prs(user, repo, regression_comments_this_pr, max_prs):
         for pr in prs:
             if 'pull_request' not in pr:
                 print(f"Skipping non-pull request issue #{number}")
+                continue
 
             number = pr['number']
             if str(number) in regression_comments_this_pr:
