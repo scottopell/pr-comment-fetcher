@@ -2,3 +2,4 @@ bin
 lib
 pyvenv.cfg
 regression_comments_by_pr.json
+.env
