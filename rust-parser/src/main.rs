@@ -13,6 +13,10 @@ struct Args {
     #[clap(short, long)]
     milestone: Option<String>,
 
+    /// The PR Number of interest
+    #[clap(long)]
+    pr_num: Option<String>,
+
     /// The name of the repository
     #[clap(short, long)]
     repo: Option<String>,
@@ -50,7 +54,17 @@ fn main() -> Result<()> {
     let repos: HashMap<String, HashMap<String, PR>> = serde_json::from_str(&data)?;
 
     if let Some(repo_of_interest) = args.repo {
-        if let Some(prs) = repos.get(&repo_of_interest) {
+        if let Some(pr_num) = args.pr_num {
+            if let Some(prs) = repos.get(&repo_of_interest) {
+                if let Some(pr) = prs.get(&pr_num) {
+                    println!("PR: {:#?}", pr);
+                } else {
+                    println!("No PR found for PR Number: {}", pr_num);
+                }
+            } else {
+                println!("No PRs found for repo: {}", repo_of_interest);
+            }
+        } else if let Some(prs) = repos.get(&repo_of_interest) {
             filter_and_summarize(prs, args.milestone.as_deref());
         } else {
             println!("No PRs found for repo: {}", repo_of_interest)
