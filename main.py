@@ -6,10 +6,11 @@ import re
 
 GITHUB_TOKEN = os.getenv("GH_TOKEN")
 HEADERS = {
-    'Authorization': f'token {GITHUB_TOKEN}',
+    'Authorization': f'Bearer {GITHUB_TOKEN}',
     'Accept': 'application/vnd.github+json'
 }
 PR_COMMENTER = 'pr-commenter[bot]'
+COMMENT_OF_INTEREST = "Regression Detector"
 
 def get_comments_from_pr(user, repo, pr_number):
     comments_url = f'https://api.github.com/repos/{user}/{repo}/issues/{pr_number}/comments'
@@ -17,7 +18,7 @@ def get_comments_from_pr(user, repo, pr_number):
 
     comment_cnt = 0
     for comment in comments:
-        if comment['user']['login'] == PR_COMMENTER:
+        if comment['user']['login'] == PR_COMMENTER and COMMENT_OF_INTEREST in comment['body']:
             return comment
 
         comment_cnt += 1
@@ -56,10 +57,11 @@ def get_comments_from_prs(user, repo, regression_comments_this_pr, max_prs):
                 # Store full comment for future processing
                 regression_comments_this_pr[number]["regression_comment"] = regression_comment
 
+                body = regression_comment["body"]
                 # Extract run id and baseline/comparison SHAs as this is only immediately needed section
-                run_id = re.search(r'Run ID: (.+)<br />', regression_comment["body"]).group(1)
-                baseline = re.search(r'Baseline: (.+)<br />', regression_comment["body"]).group(1)
-                comparison = re.search(r'Comparison: (.+)<br />', regression_comment["body"]).group(1)
+                run_id = re.search(r'Run ID: ([0-9a-h-]+)\s+', body).group(1)
+                baseline = re.search(r'Baseline: ([0-9a-h]+)\s+', body).group(1)
+                comparison = re.search(r'Comparison: ([0-9a-h]+)\s+', body).group(1)
 
                 regression_comments_this_pr[number]["regression_run_id"] = run_id
                 regression_comments_this_pr[number]["regression_baseline"] = baseline
