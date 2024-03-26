@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 import requests
 import argparse
 import json
@@ -7,14 +8,40 @@ import re
 GITHUB_TOKEN = os.getenv("GH_TOKEN")
 HEADERS = {
     'Authorization': f'Bearer {GITHUB_TOKEN}',
-    'Accept': 'application/vnd.github+json'
+    'Accept': 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28'
 }
 PR_COMMENTER = 'pr-commenter[bot]'
 COMMENT_OF_INTEREST = "Regression Detector"
 
+def make_gh_request(url):
+    print(f"making request to {url}")
+    resp = requests.get(url, headers=HEADERS)
+    while resp.status_code == 429 or resp.status_code == 403:
+        if 'Retry-After' in resp.headers:
+            retry_after = int(resp.headers['Retry-After'])
+            print(f"Got rate limited, instructed to retry after {retry_after} seconds. Sleeping...")
+            sleep(retry_after)
+            resp = requests.get(pr_details_url)
+        elif 'X-RateLimit-Reset' in resp.headers:
+            sleep_until = int(resp.headers['X-RateLimit-Reset'])
+            sleep_duration = sleep_until - datetime.now(timezone.utc)
+            print(f"Got rate limited, sleeping until {sleep_until} -- which is {sleep_duration} seconds")
+            sleep(sleep_duration)
+
+        else:
+            print(f"Got rate limited with no retry... headers: {resp.headers}")
+            return None
+
+    return resp
+
+
 def get_comments_from_pr(user, repo, pr_number):
     comments_url = f'https://api.github.com/repos/{user}/{repo}/issues/{pr_number}/comments'
-    comments = requests.get(comments_url, headers=HEADERS).json()
+    resp = make_gh_request(comments_url)
+    if resp == None:
+        return None
+    comments = resp.json()
 
     comment_cnt = 0
     for comment in comments:
@@ -32,11 +59,11 @@ def get_comments_from_prs(user, repo, regression_comments_this_pr, max_prs):
 
     while prs_processed < max_prs:
         prs_url = f'https://api.github.com/repos/{user}/{repo}/issues?page={page}&state=all'
-        resp = requests.get(prs_url, headers=HEADERS)
-        print(f"Query for {page} returned status_code {resp.status_code}")
-        if resp.status_code != 200:
-            print(resp.text)
-            return
+        resp = make_gh_request(prs_url)
+        if resp is None:
+            print("Couldn't fetch list of PRs, skipping to next one")
+            continue;
+
         prs = resp.json()
 
         for pr in prs:
@@ -48,11 +75,22 @@ def get_comments_from_prs(user, repo, regression_comments_this_pr, max_prs):
                 print(f"Skipping pr #{number} as already processed")
                 prs_processed += 1
                 continue
+            else:
+                regression_comments_this_pr[number] = dict()
+
+            pr_details_url = f"https://api.github.com/repos/{user}/{repo}/pulls/{number}"
+            pr_details_resp = make_gh_request(pr_details_url)
+            if pr_details_resp is None:
+                print(f"Got no response for request to {pr_details_url}, skpping {number}")
+                continue
+
+            pr_details = pr_details_resp.json()
+
+            regression_comments_this_pr[number]['merged'] = pr_details['merged']
+            regression_comments_this_pr[number]['merge_commit_sha'] = pr_details['merge_commit_sha']
 
             regression_comment = get_comments_from_pr(user, repo, number)
             if regression_comment is not None:
-                if number not in regression_comments_this_pr:
-                    regression_comments_this_pr[number] = dict()
                 prs_processed += 1
                 # Store full comment for future processing
                 regression_comments_this_pr[number]["regression_comment"] = regression_comment
